@@ -6,4 +6,4 @@ This is a simple example of a signature pad using the [SignaturePad](https://git
 
 ## Live Demo
 
-[signaturetest](https://signaturetest.netlify.app/)
+[signaturetest]https://jorgejimenezq.github.io/signaturetest/()
