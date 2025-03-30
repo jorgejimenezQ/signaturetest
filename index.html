@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Signature Pad with Modular Service</title>
+        <style>
+            /* Basic styling for the canvas */
+            #signatureCanvas {
+                border: 1px solid #ccc;
+                width: 400px;
+                height: 200px;
+            }
+            /* Style for displayed signatures */
+            #signatureContainer img {
+                display: block;
+                margin-bottom: 10px;
+                max-width: 400px;
+            }
+        </style>
+    </head>
+    <body>
+        <h2>Signature Pad with Modular Service</h2>
+        <canvas id="signatureCanvas"></canvas>
+        <br />
+        <button id="saveBtn">Save</button>
+        <button id="displayBtn">Display Signatures</button>
+        <!-- Container where saved signatures will be displayed -->
+        <div id="signatureContainer"></div>
+        <script type="module" src="/src/main.js"></script>
+    </body>
+</html>
