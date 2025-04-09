@@ -1,18 +1,12 @@
 // src/services/BaseSignatureService.js
 export class BaseSignatureService {
-    addSignature(signatureData) {
+    addCard(cellId, cardData) {
         throw new Error('Method not implemented');
     }
-    getSignatures() {
+    getCards() {
         throw new Error('Method not implemented');
     }
-    getSignatureById(id) {
-        throw new Error('Method not implemented');
-    }
-    updateSignature(id, newData) {
-        throw new Error('Method not implemented');
-    }
-    deleteSignature(id) {
+    getCardByCell(cellId) {
         throw new Error('Method not implemented');
     }
 }
