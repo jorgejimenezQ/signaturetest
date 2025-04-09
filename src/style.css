@@ -1,5 +1,194 @@
+/* Masonry‑style layout using CSS columns */
+#gridContainer {
+    column-count: 3; /* number of columns */
+    column-gap: 10px; /* gap between columns */
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 10px;
+    border: 4px dashed #1b1313;
+}
+
+/* Each cell becomes an inline-block that fills the column width */
+.grid-cell {
+    display: inline-block;
+    width: 100%; /* occupy full column width */
+    margin-bottom: 10px; /* vertical spacing between cells */
+    cursor: pointer;
+    /* border: 1px solid #ccc; */
+    background-color: #f0e8e8;
+    box-sizing: border-box;
+}
+
+.grid-cell:empty::after {
+    content: '';
+    display: block;
+    height: 150px;
+}
+
+.grid-cell:hover {
+    background: #f1f1f1;
+}
+
+/* Composite card view inside each cell */
+.card-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: auto;
+}
+
+.card-content img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+/* --- Popup Edit Selection Overlay --- */
+#editSelection {
+    display: none; /* hidden initially */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 900;
+    overflow: auto;
+}
+#editSelection .edit-content {
+    background: #fff;
+    max-width: 600px;
+    margin: 5% auto;
+    padding: 20px;
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+}
+/* Container for meme preview & signature canvas */
+#signatureContainer {
+    position: relative;
+    width: 100%;
+    /* The height will be adjusted dynamically based on the meme's aspect ratio */
+    height: 150px;
+    margin-bottom: 10px;
+    border: 4px dashed #1b1313;
+}
+/* Meme preview image behind the canvas */
+#memePreview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    display: none;
+}
+/* Signature canvas on top */
 #signatureCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    background: transparent;
+}
+/* --- Meme Search UI --- */
+#memeSearchContainer {
+    margin-top: 10px;
+}
+#memeSearchInput {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 5px;
+    box-sizing: border-box;
+}
+#memeSearchResults {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+.meme-result {
+    cursor: pointer;
+    text-align: center;
     border: 1px solid #ccc;
-    width: 400px;
-    height: 200px;
+    padding: 2px;
+}
+.meme-result img {
+    max-width: 80px;
+    max-height: 80px;
+    display: block;
+}
+/* --- Modal Popup for Final Composite Card --- */
+#cardPopup {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+#cardPopup .modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    max-width: 400px;
+    text-align: center;
+}
+#cardPopup img {
+    width: 100%;
+    height: auto;
+}
+#cardPopup button {
+    margin-top: 10px;
+}
+/* Updated Meme Search UI styles */
+#memeSearchContainer {
+    margin-top: 10px;
+}
+#memeSearchInput {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 5px;
+    box-sizing: border-box;
+}
+/* Use flex-wrap to allow multiple results per row */
+#memeSearchResults {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+/* Each meme result will be in a container that adjusts based on its natural image ratio */
+.meme-result {
+    display: inline-block;
+    /* Set a base width; you can adjust this value as needed */
+    width: 80px;
+    box-sizing: border-box;
+    text-align: center;
+    border: 1px solid #ccc;
+    padding: 2px;
+    background: #f9f9f9;
+    cursor: pointer;
+}
+/* Make sure the image inside adjusts responsively */
+.meme-result img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+.meme-result div {
+    font-size: 0.75em;
+    margin-top: 2px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }

@@ -4,114 +4,8 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Card Editor: Signature & Meme</title>
-        <style>
-            /* --- Grid styling --- */
-            #gridContainer {
-                border: 1px solid #ddd;
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                max-width: 600px;
-                margin: 20px auto;
-                gap: 5px;
-            }
-            .grid-cell {
-                border: 1px solid #ccc;
-                height: 150px;
-                position: relative;
-                cursor: pointer;
-            }
-            .grid-cell:hover {
-                background: #f1f1f1;
-            }
-            /* --- Composite card view: both images inside the cell --- */
-            .card-content {
-                display: flex;
-                flex-direction: column;
-                height: 100%;
-            }
-            .card-content img {
-                width: 100%;
-                flex: 1;
-                object-fit: contain;
-            }
-
-            /* --- Popup Edit Selection Overlay --- */
-            #editSelection {
-                display: none; /* hidden initially */
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.8);
-                z-index: 900;
-                overflow: auto;
-            }
-            #editSelection .edit-content {
-                background: #fff;
-                max-width: 600px;
-                margin: 5% auto;
-                padding: 20px;
-                position: relative;
-            }
-            /* Container to hold meme preview & signature canvas */
-            #signatureContainer {
-                position: relative;
-                width: 100%;
-                height: 150px;
-                margin-bottom: 10px;
-                border: 4px dashed #171616;
-            }
-            /* Meme preview image behind the canvas */
-            #memePreview {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 150px;
-                object-fit: cover;
-                z-index: 0;
-                display: none;
-            }
-            /* Signature canvas on top */
-            #signatureCanvas {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 150px;
-                z-index: 1;
-                background: transparent;
-            }
-
-            /* --- Modal Popup for Final Composite Card --- */
-            #cardPopup {
-                display: none; /* hidden by default */
-                position: fixed;
-                z-index: 1000;
-                left: 0;
-                top: 0;
-                width: 100%;
-                height: 100%;
-                overflow: auto;
-                background-color: rgba(0, 0, 0, 0.8);
-            }
-            #cardPopup .modal-content {
-                background-color: #fefefe;
-                margin: 10% auto;
-                padding: 20px;
-                border: 1px solid #888;
-                max-width: 400px;
-                text-align: center;
-            }
-            #cardPopup img {
-                width: 100%;
-                height: auto;
-            }
-            #cardPopup button {
-                margin-top: 10px;
-            }
-        </style>
+        <!-- Did not parse stylesheet at 'http://localhost:5173/signaturetest/style.css' because non CSS MIME types are not allowed in strict mode. -->
+        <link rel="stylesheet" href="./src/style.css" />
     </head>
     <body>
         <h2>Current Cards (Grid)</h2>
@@ -126,9 +20,12 @@
             <div class="grid-cell" data-cell="7"></div>
             <div class="grid-cell" data-cell="8"></div>
             <div class="grid-cell" data-cell="9"></div>
+            <div class="grid-cell" data-cell="10"></div>
+            <div class="grid-cell" data-cell="11"></div>
+            <div class="grid-cell" data-cell="12"></div>
         </div>
 
-        <!-- Edit Selection Overlay Popup (shown when editing a cell) -->
+        <!-- Edit Selection Overlay Popup -->
         <div id="editSelection">
             <div class="edit-content">
                 <h3>Edit Card: <span id="selectedCellLabel"></span></h3>
@@ -137,18 +34,19 @@
                     <canvas id="signatureCanvas"></canvas>
                 </div>
                 <br />
-                <!-- Meme Dropdown -->
-                <label for="memeSelect">Choose a meme:</label>
-                <select id="memeSelect">
-                    <option value="">Loading memes...</option>
-                </select>
-                <br /><br />
+                <!-- Meme Search UI -->
+                <div id="memeSearchContainer">
+                    <label for="memeSearchInput">Search Memes:</label>
+                    <input type="text" id="memeSearchInput" placeholder="Type to search memes..." />
+                    <div id="memeSearchResults"></div>
+                </div>
+                <br />
                 <button id="submitCardBtn">Submit</button>
                 <button id="cancelBtn">Cancel</button>
             </div>
         </div>
 
-        <!-- Modal Popup for showing the composite card -->
+        <!-- Modal Popup for Final Composite Card -->
         <div id="cardPopup">
             <div class="modal-content">
                 <h3>Your Composite Card</h3>
