@@ -1,3 +1,12 @@
+/**
+ * src/modules/cardEditors/SignatureMemeEditor.js
+ *
+ * A card editor that allows users to create a composite card by signing and selecting a meme.
+ *
+ * @author Jorge Jimenez
+ * @date April 9, 2025
+ */
+
 import { BaseCardEditor } from './BaseCardEditor.js';
 import { SignatureModule } from '../signatureModule.js';
 import { mergeMemeAndSignature } from '../../utilities/mergeMemeSignature.js';

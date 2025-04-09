@@ -6,6 +6,11 @@
     margin: 20px auto;
     padding: 10px;
     border: 4px dashed #1b1313;
+    background-image: url('/backgrounds/vintagepatterns.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    /* background-color: #f0e8e8; */
 }
 
 /* Each cell becomes an inline-block that fills the column width */
@@ -15,7 +20,8 @@
     margin-bottom: 10px; /* vertical spacing between cells */
     cursor: pointer;
     /* border: 1px solid #ccc; */
-    background-color: #f0e8e8;
+    /* bg color with transparency */
+    background: rgba(255, 255, 255, 0.4);
     box-sizing: border-box;
 }
 

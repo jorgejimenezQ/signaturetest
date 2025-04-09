@@ -1,0 +1,957 @@
+This file is a merged representation of a subset of the codebase, containing files not matching ignore patterns, combined into a single document by Repomix.
+
+<file_summary>
+This file represents the codebase for the prototyping of a project called "Sendara". It is a collection of files that have been combined into a single document by Repomix.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching these patterns are excluded: public/*
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+<additional_info>
+The file is a packed representation of the entire repository for the purpose of prototyping a project called "Sendara". The project will ultimately be a web and mobile application that allows users to send cards for different purposes and occasions, e.g., for birthdays, graduations, and weddings. The project will also allow users to sign cards using a digital signature pad and meme api's. It will also include a feature to see the finally signed cards in 3D.
+</additional_info>
+
+</file_summary>
+
+<directory_structure>
+src/
+  modules/
+    cardEditors/
+      BaseCardEditor.js
+      SignatureMemeEditor.js
+    signatureModule.js
+  services/
+    BaseSignatureService.js
+    index.js
+    InMemorySignatureService.js
+    MemeSearchService.js
+  utilities/
+    mergeMemeSignature.js
+    mergeSort.js
+  main.js
+  style.css
+.gitignore
+index.html
+package.json
+README.md
+vite.config.js
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="src/modules/cardEditors/BaseCardEditor.js">
+/*
+This class definition is for an abstract base class `BaseCardEditor`. It cannot be instantiated directly and is intended to be subclassed by other classes that implement the editor functionality.
+
+Here's a brief explanation of each class method:
+
+* `constructor()`: Prevents direct instantiation of the class and throws an error if attempted.
+* `init(containerElement)`: Initializes the editor UI inside a given container element. **Must be implemented by subclasses.**
+* `isValid()`: Checks if the editor's input is valid (e.g., meme selected, signature provided). **Must be implemented by subclasses.**
+* `getComposite()`: Returns a Promise that resolves to the composite output (e.g., a merged image data URL). **Must be implemented by subclasses.**
+* `clear()`: Resets the editor's internal state. **Must be implemented by subclasses.**
+
+*/
+
+export class BaseCardEditor {
+    constructor() {
+        if (new.target === BaseCardEditor) {
+            throw new TypeError('Cannot instantiate BaseCardEditor directly');
+        }
+    }
+
+    /**
+     * Initialize the editor UI inside the given container element.
+     * @param {HTMLElement} containerElement
+     */
+    init(containerElement) {
+        throw new Error('init() must be implemented by subclasses');
+    }
+
+    /**
+     * Returns true if the editor’s input is valid (e.g. meme selected, signature provided).
+     * @returns {boolean}
+     */
+    isValid() {
+        throw new Error('isValid() must be implemented by subclasses');
+    }
+
+    /**
+     * Returns a Promise that resolves to the composite output (e.g. a merged image data URL).
+     * @returns {Promise<string>}
+     */
+    getComposite() {
+        throw new Error('getComposite() must be implemented by subclasses');
+    }
+
+    /**
+     * Resets the editor's internal state.
+     */
+    clear() {
+        throw new Error('clear() must be implemented by subclasses');
+    }
+}
+</file>
+
+<file path="src/modules/cardEditors/SignatureMemeEditor.js">
+/**
+ * src/modules/cardEditors/SignatureMemeEditor.js
+ *
+ * A card editor that allows users to create a composite card by signing and selecting a meme.
+ *
+ * @author Jorge Jimenez
+ * @date April 9, 2025
+ */
+
+import { BaseCardEditor } from './BaseCardEditor.js';
+import { SignatureModule } from '../signatureModule.js';
+import { mergeMemeAndSignature } from '../../utilities/mergeMemeSignature.js';
+import { MemeSearchService } from '../../services/MemeSearchService.js';
+
+export class SignatureMemeEditor extends BaseCardEditor {
+    constructor(options = {}) {
+        super();
+        // DOM references will be set upon init.
+        this.container = null;
+        this.signatureContainer = null;
+        this.memePreview = null;
+        this.signatureCanvas = null;
+        this.memeSearchInput = null;
+        this.memeSearchResults = null;
+        this.signatureModule = null;
+        this.selectedMemeUrl = null;
+
+        // Create our own instance of MemeSearchService for local search.
+        this.memeSearchService = new MemeSearchService();
+        // Optionally, accept extra configuration via options.
+        this.options = Object.assign({}, options);
+    }
+
+    /**
+     * Initialize the editor within the provided container.
+     * Expects the container to have the following child elements by ID:
+     *   #signatureContainer, #memePreview, #signatureCanvas,
+     *   #memeSearchInput, and #memeSearchResults.
+     * @param {HTMLElement} containerElement
+     */
+    async init(containerElement) {
+        this.container = containerElement;
+        this.signatureContainer = containerElement.querySelector('#signatureContainer');
+        this.memePreview = containerElement.querySelector('#memePreview');
+        this.signatureCanvas = containerElement.querySelector('#signatureCanvas');
+        this.memeSearchInput = containerElement.querySelector('#memeSearchInput');
+        this.memeSearchResults = containerElement.querySelector('#memeSearchResults');
+
+        // Initialize the signature pad.
+        this.signatureModule = new SignatureModule(this.signatureCanvas);
+        this.signatureModule.clear();
+
+        // Initialize meme search service and set up search functionality.
+        await this.memeSearchService.init();
+        this.setupMemeSearch();
+
+        // When the meme preview loads, adjust the container height to match its aspect ratio.
+        this.memePreview.addEventListener('load', () => {
+            const containerWidth = this.signatureContainer.offsetWidth;
+            const aspectRatio = this.memePreview.naturalHeight / this.memePreview.naturalWidth;
+            const newHeight = containerWidth * aspectRatio;
+            this.signatureContainer.style.height = `${newHeight}px`;
+            this.memePreview.style.height = `${newHeight}px`;
+            this.signatureCanvas.style.height = `${newHeight}px`;
+            if (this.signatureModule && typeof this.signatureModule._resizeCanvas === 'function') {
+                this.signatureModule._resizeCanvas();
+            }
+        });
+    }
+
+    /**
+     * Set up meme search input and results.
+     */
+    setupMemeSearch() {
+        // Render initial results (all memes).
+        this.renderMemeResults(this.memeSearchService.search(''));
+
+        this.memeSearchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            const results = this.memeSearchService.search(query);
+            this.renderMemeResults(results);
+        });
+
+        this.memeSearchInput.addEventListener('focus', () => {
+            this.renderMemeResults(this.memeSearchService.search(''));
+        });
+    }
+
+    /**
+     * Render meme search results inside the memeSearchResults container.
+     * @param {Array} memes
+     */
+    renderMemeResults(memes) {
+        this.memeSearchResults.innerHTML = '';
+        if (!memes.length) {
+            this.memeSearchResults.innerHTML = '<p>No results found.</p>';
+            return;
+        }
+        memes.forEach((meme) => {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'meme-result';
+            resultDiv.title = meme.name;
+
+            const thumb = document.createElement('img');
+            thumb.src = meme.url;
+            thumb.alt = meme.name;
+
+            const label = document.createElement('div');
+            label.textContent = meme.name;
+
+            resultDiv.appendChild(thumb);
+            resultDiv.appendChild(label);
+
+            // When a meme result is clicked, set it as selected.
+            resultDiv.addEventListener('click', () => {
+                this.setSelectedMemeUrl(meme.url);
+                this.memeSearchResults.innerHTML = '';
+                this.memeSearchInput.value = meme.name;
+            });
+
+            this.memeSearchResults.appendChild(resultDiv);
+        });
+    }
+
+    /**
+     * Returns true if both a signature has been provided and a meme has been selected.
+     * @returns {boolean}
+     */
+    isValid() {
+        return this.signatureModule && !this.signatureModule.isEmpty() && !!this.selectedMemeUrl;
+    }
+
+    /**
+     * Returns a Promise that resolves to the composite merged image as a data URL.
+     * @returns {Promise<string>}
+     */
+    getComposite() {
+        return mergeMemeAndSignature(this.selectedMemeUrl, this.signatureCanvas);
+    }
+
+    /**
+     * Clears the editor's input.
+     */
+    clear() {
+        if (this.signatureModule) {
+            this.signatureModule.clear();
+        }
+        this.selectedMemeUrl = null;
+        if (this.memePreview) {
+            this.memePreview.style.display = 'none';
+            this.memePreview.src = '';
+        }
+        if (this.memeSearchInput) {
+            this.memeSearchInput.value = '';
+        }
+        if (this.memeSearchResults) {
+            this.memeSearchResults.innerHTML = '';
+        }
+    }
+
+    /**
+     * Sets the selected meme URL and updates the preview.
+     * @param {string} url
+     */
+    setSelectedMemeUrl(url) {
+        this.selectedMemeUrl = url;
+        if (url && this.memePreview) {
+            this.memePreview.src = url;
+            this.memePreview.style.display = 'block';
+        } else if (this.memePreview) {
+            this.memePreview.style.display = 'none';
+            this.memePreview.src = '';
+        }
+    }
+}
+</file>
+
+<file path="src/modules/signatureModule.js">
+// src/modules/signatureModule.js
+import SignaturePad from 'signature_pad';
+
+export class SignatureModule {
+    /**
+     * @param {HTMLCanvasElement} canvasElement - The canvas to attach the signature pad.
+     */
+    constructor(canvasElement) {
+        this.canvas = canvasElement;
+        this.signaturePad = new SignaturePad(canvasElement);
+        this._resizeCanvas();
+        window.addEventListener('resize', () => this._resizeCanvas());
+    }
+
+    // Private: Handle high DPI resizing.
+    _resizeCanvas() {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        this.canvas.width = this.canvas.offsetWidth * ratio;
+        this.canvas.height = this.canvas.offsetHeight * ratio;
+        this.canvas.getContext('2d').scale(ratio, ratio);
+    }
+
+    /** Check if the pad is empty */
+    isEmpty() {
+        return this.signaturePad.isEmpty();
+    }
+
+    /**
+     * Returns the current signature as a Data URI.
+     * @returns {string|null}
+     */
+    saveSignature() {
+        if (this.signaturePad.isEmpty()) {
+            return null;
+        }
+        return this.signaturePad.toDataURL();
+    }
+
+    /** Clear the pad */
+    clear() {
+        this.signaturePad.clear();
+    }
+}
+</file>
+
+<file path="src/services/MemeSearchService.js">
+import { sortMemes } from '../utilities/mergeSort.js';
+
+// src/services/MemeSearchService.js
+export class MemeSearchService {
+    constructor() {
+        this.memes = [];
+        this.initialized = false;
+    }
+
+    /**
+     * Fetch memes from Imgflip and store them locally.
+     */
+    async init() {
+        if (this.initialized) return;
+        try {
+            const response = await fetch('https://api.imgflip.com/get_memes');
+            if (!response.ok) {
+                throw new Error('Error fetching memes');
+            }
+            const data = await response.json();
+            if (data.success && Array.isArray(data.data.memes)) {
+                this.memes = data.data.memes;
+                // sort memes
+                console.log('Memes loaded:', this.memes);
+                sortMemes(this.memes);
+                console.log('Memes sorted:', this.memes);
+            }
+            this.initialized = true;
+        } catch (e) {
+            console.error('Failed to initialize MemeSearchService', e);
+        }
+    }
+
+    /**
+     * Filter memes by name using the provided query (case-insensitive).
+     * @param {string} query
+     * @returns {Array} Filtered list of meme objects.
+     */
+    search(query) {
+        if (!query) {
+            return this.memes;
+        }
+
+        // if empty string, return all
+        if (query === '') {
+            return this.memes;
+        }
+        return this.memes.filter((meme) => meme.name.toLowerCase().includes(query.toLowerCase()));
+    }
+}
+</file>
+
+<file path="src/utilities/mergeMemeSignature.js">
+export function mergeMemeAndSignature(memeUrl, canvasEl) {
+    return new Promise((resolve, reject) => {
+        const offscreen = document.createElement('canvas');
+        offscreen.width = canvasEl.width;
+        offscreen.height = canvasEl.height;
+        const ctx = offscreen.getContext('2d');
+
+        const memeImg = new Image();
+        memeImg.crossOrigin = 'anonymous';
+        memeImg.src = memeUrl;
+        memeImg.onload = () => {
+            ctx.drawImage(memeImg, 0, 0, offscreen.width, offscreen.height);
+            ctx.drawImage(canvasEl, 0, 0);
+            resolve(offscreen.toDataURL());
+        };
+        memeImg.onerror = (err) => reject(err);
+    });
+}
+</file>
+
+<file path="src/utilities/mergeSort.js">
+// utilities/mergeSort.js
+
+/**
+ * Sorts an array of meme objects (each with a .name property)
+ * in lexicographical order using merge sort.
+ *
+ * @param {Array} a - The array of meme objects.
+ */
+export function sortMemes(a) {
+    const aux = new Array(a.length);
+    sort(a, aux, 0, a.length - 1);
+}
+
+function sort(a, aux, lo, hi) {
+    if (hi <= lo) return;
+    const mid = Math.floor(lo + (hi - lo) / 2);
+    sort(a, aux, lo, mid);
+    sort(a, aux, mid + 1, hi);
+    merge(a, aux, lo, mid, hi);
+}
+
+function merge(a, aux, lo, mid, hi) {
+    // Copy a[lo..hi] to aux[lo..hi].
+    for (let k = lo; k <= hi; k++) {
+        aux[k] = a[k];
+    }
+
+    let i = lo,
+        j = mid + 1;
+    for (let k = lo; k <= hi; k++) {
+        if (i > mid) a[k] = aux[j++];
+        else if (j > hi) a[k] = aux[i++];
+        // Use localeCompare on meme's name to compare lexically.
+        else if (aux[j].name.localeCompare(aux[i].name) < 0) a[k] = aux[j++];
+        else a[k] = aux[i++];
+    }
+}
+
+export default sortMemes;
+</file>
+
+<file path=".gitignore">
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+</file>
+
+<file path="src/services/BaseSignatureService.js">
+// src/services/BaseSignatureService.js
+export class BaseSignatureService {
+    addCard(cellId, cardData) {
+        throw new Error('Method not implemented');
+    }
+    getCards() {
+        throw new Error('Method not implemented');
+    }
+    getCardByCell(cellId) {
+        throw new Error('Method not implemented');
+    }
+}
+</file>
+
+<file path="src/services/index.js">
+// src/services/index.js
+import { InMemorySignatureService } from './InMemorySignatureService.js';
+const signatureService = new InMemorySignatureService();
+export default signatureService;
+</file>
+
+<file path="src/services/InMemorySignatureService.js">
+// src/services/InMemorySignatureService.js
+import { BaseSignatureService } from './BaseSignatureService.js';
+
+export class InMemorySignatureService extends BaseSignatureService {
+    constructor() {
+        super();
+        this.cards = [];
+    }
+
+    /**
+     * Save a card for a given cell.
+     * @param {string} cellId - The identifier for the grid cell.
+     * @param {Object} cardData - Composite data with property: composite.
+     * @returns {Object} The created card.
+     */
+    addCard(cellId, cardData) {
+        const card = {
+            id: Date.now(),
+            cell: cellId,
+            composite: cardData.composite,
+            createdAt: new Date(),
+        };
+        const existingIndex = this.cards.findIndex((c) => c.cell === cellId);
+        if (existingIndex !== -1) {
+            this.cards[existingIndex] = card;
+        } else {
+            this.cards.push(card);
+        }
+        return card;
+    }
+
+    getCards() {
+        return this.cards;
+    }
+
+    getCardByCell(cellId) {
+        return this.cards.find((card) => card.cell === cellId);
+    }
+}
+</file>
+
+<file path="src/style.css">
+/* Masonry‑style layout using CSS columns */
+#gridContainer {
+    column-count: 3; /* number of columns */
+    column-gap: 10px; /* gap between columns */
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 10px;
+    border: 4px dashed #1b1313;
+    background-image: url('/backgrounds/vintagepatterns.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    /* background-color: #f0e8e8; */
+}
+
+/* Each cell becomes an inline-block that fills the column width */
+.grid-cell {
+    display: inline-block;
+    width: 100%; /* occupy full column width */
+    margin-bottom: 10px; /* vertical spacing between cells */
+    cursor: pointer;
+    /* border: 1px solid #ccc; */
+    /* bg color with transparency */
+    background: rgba(255, 255, 255, 0.4);
+    box-sizing: border-box;
+}
+
+.grid-cell:empty::after {
+    content: '';
+    display: block;
+    height: 150px;
+}
+
+.grid-cell:hover {
+    background: #f1f1f1;
+}
+
+/* Composite card view inside each cell */
+.card-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: auto;
+}
+
+.card-content img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+/* --- Popup Edit Selection Overlay --- */
+#editSelection {
+    display: none; /* hidden initially */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 900;
+    overflow: auto;
+}
+#editSelection .edit-content {
+    background: #fff;
+    max-width: 600px;
+    margin: 5% auto;
+    padding: 20px;
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+}
+/* Container for meme preview & signature canvas */
+#signatureContainer {
+    position: relative;
+    width: 100%;
+    /* The height will be adjusted dynamically based on the meme's aspect ratio */
+    height: 150px;
+    margin-bottom: 10px;
+    border: 4px dashed #1b1313;
+}
+/* Meme preview image behind the canvas */
+#memePreview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    display: none;
+}
+/* Signature canvas on top */
+#signatureCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    background: transparent;
+}
+/* --- Meme Search UI --- */
+#memeSearchContainer {
+    margin-top: 10px;
+}
+#memeSearchInput {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 5px;
+    box-sizing: border-box;
+}
+#memeSearchResults {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+.meme-result {
+    cursor: pointer;
+    text-align: center;
+    border: 1px solid #ccc;
+    padding: 2px;
+}
+.meme-result img {
+    max-width: 80px;
+    max-height: 80px;
+    display: block;
+}
+/* --- Modal Popup for Final Composite Card --- */
+#cardPopup {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+#cardPopup .modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    max-width: 400px;
+    text-align: center;
+}
+#cardPopup img {
+    width: 100%;
+    height: auto;
+}
+#cardPopup button {
+    margin-top: 10px;
+}
+/* Updated Meme Search UI styles */
+#memeSearchContainer {
+    margin-top: 10px;
+}
+#memeSearchInput {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 5px;
+    box-sizing: border-box;
+}
+/* Use flex-wrap to allow multiple results per row */
+#memeSearchResults {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+/* Each meme result will be in a container that adjusts based on its natural image ratio */
+.meme-result {
+    display: inline-block;
+    /* Set a base width; you can adjust this value as needed */
+    width: 80px;
+    box-sizing: border-box;
+    text-align: center;
+    border: 1px solid #ccc;
+    padding: 2px;
+    background: #f9f9f9;
+    cursor: pointer;
+}
+/* Make sure the image inside adjusts responsively */
+.meme-result img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+.meme-result div {
+    font-size: 0.75em;
+    margin-top: 2px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+</file>
+
+<file path="package.json">
+{
+    "name": "signing",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview",
+        "deploy": "gh-pages -d dist"
+    },
+    "devDependencies": {
+        "gh-pages": "^6.3.0",
+        "vite": "^6.2.0"
+    },
+    "dependencies": {
+        "signature_pad": "^5.0.7"
+    }
+}
+</file>
+
+<file path="vite.config.js">
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+    base: '/signaturetest/',
+    server: {
+        host: true,
+    },
+});
+</file>
+
+<file path="src/main.js">
+import signatureService from './services/index.js';
+import { MemeSearchService } from './services/MemeSearchService.js';
+import { SignatureMemeEditor } from './modules/cardEditors/SignatureMemeEditor.js';
+
+// --- DOM Elements ---
+const editSelection = document.getElementById('editSelection');
+const selectedCellLabel = document.getElementById('selectedCellLabel');
+const gridCells = document.querySelectorAll('.grid-cell');
+const submitCardBtn = document.getElementById('submitCardBtn');
+const cancelBtn = document.getElementById('cancelBtn');
+const cardPopup = document.getElementById('cardPopup');
+const popupImage = document.getElementById('popupImage');
+const closePopup = document.getElementById('closePopup');
+
+// --- Application State ---
+let selectedCellId = null;
+let selectedCellElement = null;
+let currentEditor = null; // Instance of our current card editor
+
+// Initialize MemeSearchService (used internally by the editor)
+const memeSearchService = new MemeSearchService();
+memeSearchService.init(); // Editor will create its own instance if needed
+
+// Setup grid cell click events.
+gridCells.forEach((cell) => {
+    cell.addEventListener('click', () => {
+        selectedCellId = cell.getAttribute('data-cell');
+        selectedCellElement = cell;
+        selectedCellLabel.textContent = selectedCellId;
+        editSelection.style.display = 'block';
+
+        // Initialize our plug-and-play editor (SignatureMemeEditor in this case)
+        currentEditor = new SignatureMemeEditor();
+        currentEditor.init(editSelection);
+    });
+});
+
+// Setup Submit button event.
+submitCardBtn.addEventListener('click', async () => {
+    if (!currentEditor.isValid()) {
+        alert('Please complete the card (sign and select a meme) before submitting.');
+        return;
+    }
+    try {
+        const compositeDataUrl = await currentEditor.getComposite();
+        const card = signatureService.addCard(selectedCellId, { composite: compositeDataUrl });
+        updateGridCell(selectedCellElement, card);
+        editSelection.style.display = 'none';
+        showCardPopup(card);
+        selectedCellId = null;
+        selectedCellElement = null;
+    } catch (err) {
+        console.error('Error merging images:', err);
+        alert('Failed to merge meme and signature.');
+    }
+});
+
+// Cancel event.
+cancelBtn.addEventListener('click', () => {
+    editSelection.style.display = 'none';
+    selectedCellId = null;
+    selectedCellElement = null;
+});
+
+// Update grid cell with composite card.
+function updateGridCell(cellElement, card) {
+    cellElement.innerHTML = '';
+    const container = document.createElement('div');
+    container.className = 'card-content';
+    const compositeImg = document.createElement('img');
+    compositeImg.src = card.composite;
+    compositeImg.alt = 'Composite Card';
+    container.appendChild(compositeImg);
+    cellElement.appendChild(container);
+}
+
+// Show modal popup with composite card.
+function showCardPopup(card) {
+    popupImage.src = card.composite;
+    cardPopup.style.display = 'block';
+}
+closePopup.addEventListener('click', () => {
+    cardPopup.style.display = 'none';
+});
+</file>
+
+<file path="index.html">
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Card Editor: Signature & Meme</title>
+        <!-- Did not parse stylesheet at 'http://localhost:5173/signaturetest/style.css' because non CSS MIME types are not allowed in strict mode. -->
+        <link rel="stylesheet" href="./src/style.css" />
+    </head>
+    <body>
+        <h2>Current Cards (Grid)</h2>
+        <div id="gridContainer">
+            <!-- Create 9 cells for a 3x3 grid -->
+            <div class="grid-cell" data-cell="1"></div>
+            <div class="grid-cell" data-cell="2"></div>
+            <div class="grid-cell" data-cell="3"></div>
+            <div class="grid-cell" data-cell="4"></div>
+            <div class="grid-cell" data-cell="5"></div>
+            <div class="grid-cell" data-cell="6"></div>
+            <div class="grid-cell" data-cell="7"></div>
+            <div class="grid-cell" data-cell="8"></div>
+            <div class="grid-cell" data-cell="9"></div>
+            <div class="grid-cell" data-cell="10"></div>
+            <div class="grid-cell" data-cell="11"></div>
+            <div class="grid-cell" data-cell="12"></div>
+        </div>
+
+        <!-- Edit Selection Overlay Popup -->
+        <div id="editSelection">
+            <div class="edit-content">
+                <h3>Edit Card: <span id="selectedCellLabel"></span></h3>
+                <div id="signatureContainer">
+                    <img id="memePreview" alt="Meme Preview" />
+                    <canvas id="signatureCanvas"></canvas>
+                </div>
+                <br />
+                <!-- Meme Search UI -->
+                <div id="memeSearchContainer">
+                    <label for="memeSearchInput">Search Memes:</label>
+                    <input type="text" id="memeSearchInput" placeholder="Type to search memes..." />
+                    <div id="memeSearchResults"></div>
+                </div>
+                <br />
+                <button id="submitCardBtn">Submit</button>
+                <button id="cancelBtn">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Modal Popup for Final Composite Card -->
+        <div id="cardPopup">
+            <div class="modal-content">
+                <h3>Your Composite Card</h3>
+                <img id="popupImage" src="" alt="Composite Card" />
+                <br />
+                <button id="closePopup">Close</button>
+            </div>
+        </div>
+
+        <script type="module" src="/src/main.js"></script>
+    </body>
+</html>
+</file>
+
+<file path="README.md">
+# signaturetest
+
+## Description
+
+This is a simple example of a signature pad using the [SignaturePad](https://github.com/szimek/signature_pad) library.
+
+## Live Demo
+
+[signaturetest](https://signaturetest.netlify.app/)
+</file>
+
+</files>
